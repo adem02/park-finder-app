@@ -4,13 +4,13 @@ import { Colors } from '@/constants/Colors';
 import { Spacing } from '@/constants/Spacing';
 import { Typography } from '@/constants/Typography';
 
-export default function MapScreen() {
+export default function SearchScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.placeholder}>
-        <Text style={styles.title}>Carte</Text>
+        <Text style={styles.title}>Recherche</Text>
         <Text style={styles.subtitle}>
-          La Google Map et les pins arriveront ici.
+          Barre de recherche, filtres et liste arriveront ici.
         </Text>
       </View>
     </SafeAreaView>
