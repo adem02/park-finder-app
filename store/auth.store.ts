@@ -4,6 +4,7 @@ import {
   secureStorage,
   type SecureStorage,
 } from '@/services/secure-storage.service';
+import { useProfileStore } from '@/store/profile.store';
 import type { AuthSession, AuthUser } from '@/types/auth.types';
 
 interface AuthState {
@@ -50,6 +51,7 @@ const createAuthStore = (storage: SecureStorage) =>
       ]);
 
       set({ token: null, user: null });
+      useProfileStore.getState().reset();
     },
   }));
 
