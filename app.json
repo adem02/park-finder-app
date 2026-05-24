@@ -39,7 +39,13 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "ParkFinder utilise votre position pour vous montrer les parkings à proximité."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
