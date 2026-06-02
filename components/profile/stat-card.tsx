@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { Radius, Spacing } from '@/constants/Spacing';
 import { Typography } from '@/constants/Typography';
@@ -7,13 +8,44 @@ interface StatCardProps {
   value: number;
   label: string;
   valueColor: string;
+  animate?: boolean;
+  durationMs?: number;
 }
 
-export function StatCard({ value, label, valueColor }: StatCardProps) {
+export function StatCard({
+  value,
+  label,
+  valueColor,
+  animate = true,
+  durationMs = 900,
+}: StatCardProps) {
+  const animated = useRef(new Animated.Value(0)).current;
+  const [displayed, setDisplayed] = useState(animate ? 0 : value);
+
+  useEffect(() => {
+    if (!animate) {
+      setDisplayed(value);
+      return;
+    }
+    animated.setValue(0);
+    const listenerId = animated.addListener(({ value: v }) => {
+      setDisplayed(Math.round(v));
+    });
+    Animated.timing(animated, {
+      toValue: value,
+      duration: durationMs,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+    return () => {
+      animated.removeListener(listenerId);
+    };
+  }, [value, animate, durationMs, animated]);
+
   return (
     <View style={styles.card}>
       <Text style={[styles.value, { color: valueColor }]}>
-        {value.toLocaleString('fr-FR')}
+        {displayed.toLocaleString('fr-FR')}
       </Text>
       <Text style={styles.label}>{label}</Text>
     </View>

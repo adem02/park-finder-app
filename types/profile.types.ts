@@ -54,3 +54,23 @@ export interface UserProfile {
   rank: ProfileRank | null;
   recentParkings: ProfileRecentParking[];
 }
+
+export interface LeaderboardEntry {
+  rank: number;
+  userId: string;
+  username: string;
+  photoUrl?: string;
+  monthlyPoints: number;
+}
+
+export interface LeaderboardUserRank {
+  rank: number;
+  percentile: string;
+  monthlyPoints: number;
+}
+
+export interface Leaderboard {
+  month: string;
+  entries: LeaderboardEntry[];
+  userRank: LeaderboardUserRank | null;
+}

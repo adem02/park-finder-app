@@ -10,6 +10,10 @@ export const Endpoints = {
   },
   parkings: {
     nearby: '/parkings',
+    create: '/parkings/new',
     details: (id: string) => `/parkings/${id}`,
+    vote: (id: string) => `/parkings/${id}/vote`,
+    comments: (id: string) => `/parkings/${id}/comments`,
+    report: (id: string) => `/parkings/${id}/report`,
   },
 } as const;

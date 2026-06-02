@@ -15,7 +15,7 @@ import { Colors } from '@/constants/Colors';
 import { Spacing } from '@/constants/Spacing';
 import { Typography } from '@/constants/Typography';
 import { useProfileStore } from '@/store/profile.store';
-import { recentParkingToContribution } from './(tabs)/profile';
+import { recentParkingToContribution } from '@/lib/profile';
 
 export default function ContributionsScreen() {
   const router = useRouter();

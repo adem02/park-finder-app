@@ -27,7 +27,7 @@ export function RankingCard({
       ? `sur ${total.toLocaleString('fr-FR')} à ${city}`
       : city
         ? `à ${city}`
-        : 'ce mois-ci';
+        : 'ce mois-ci · classement par ville bientôt';
 
   return (
     <View style={styles.card}>
