@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { Radius, Spacing } from '@/constants/Spacing';
 import { Typography } from '@/constants/Typography';
@@ -13,11 +13,12 @@ const ICON: Record<ContributionType, keyof typeof Ionicons.glyphMap> = {
 
 interface ContributionItemProps {
   item: Contribution;
+  onPress?: () => void;
 }
 
-export function ContributionItem({ item }: ContributionItemProps) {
-  return (
-    <View style={styles.item}>
+export function ContributionItem({ item, onPress }: ContributionItemProps) {
+  const content = (
+    <>
       <View style={styles.icon}>
         <Ionicons name={ICON[item.type]} size={22} color={Colors.primary} />
       </View>
@@ -29,10 +30,28 @@ export function ContributionItem({ item }: ContributionItemProps) {
       </View>
       <View style={styles.right}>
         <Text style={styles.points}>+{item.points} pts</Text>
-        <Text style={styles.time}>{item.timeAgo}</Text>
+        {onPress ? (
+          <Ionicons name="chevron-forward" size={16} color={Colors.muted} />
+        ) : (
+          <Text style={styles.time}>{item.timeAgo}</Text>
+        )}
       </View>
-    </View>
+    </>
   );
+
+  if (onPress) {
+    return (
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [styles.item, pressed && styles.pressed]}
+        accessibilityRole="button"
+      >
+        {content}
+      </Pressable>
+    );
+  }
+
+  return <View style={styles.item}>{content}</View>;
 }
 
 const styles = StyleSheet.create({
@@ -66,4 +85,5 @@ const styles = StyleSheet.create({
   right: { alignItems: 'flex-end', gap: 2 },
   points: { ...Typography.caption, color: Colors.success, fontWeight: '700' },
   time: { fontSize: 10, color: Colors.muted },
+  pressed: { opacity: 0.7 },
 });
