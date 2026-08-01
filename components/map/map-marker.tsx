@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useEffect, useState } from 'react';
 import { Marker, type MapMarkerProps as RNMarkerProps } from 'react-native-maps';
 
 import { ParkingPin } from './parking-pin';
@@ -12,6 +12,21 @@ interface MapMarkerProps {
 }
 
 function MapMarkerBase({ id, coordinate, selected, onPress }: MapMarkerProps) {
+  const [tracks, setTracks] = useState(true);
+
+  // Le style change → on autorise un nouveau snapshot du pin
+  useEffect(() => {
+    setTracks(true);
+  }, [selected]);
+
+  useEffect(() => {
+    if (!tracks) return;
+    // Un petit délai pour laisser le pin custom finir son layout côté natif
+    // avant de figer le snapshot. Sans ça, Android affiche parfois un marker vide.
+    const timeout = setTimeout(() => setTracks(false), 60);
+    return () => clearTimeout(timeout);
+  }, [tracks]);
+
   const handlePress: RNMarkerProps['onPress'] = (e) => {
     e.stopPropagation?.();
     onPress(id);
@@ -23,7 +38,7 @@ function MapMarkerBase({ id, coordinate, selected, onPress }: MapMarkerProps) {
       coordinate={coordinate}
       anchor={{ x: 0.5, y: 1 }}
       onPress={handlePress}
-      tracksViewChanges={false}
+      tracksViewChanges={tracks}
     >
       <ParkingPin
         selected={selected}

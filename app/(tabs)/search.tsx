@@ -37,9 +37,12 @@ export default function ListScreen() {
 
   const debouncedQuery = useDebounce(query, 300);
 
-  const { coordinates } = useCurrentLocation({ fallback: FALLBACK_CENTER });
+  const { coordinates, source } = useCurrentLocation({ fallback: FALLBACK_CENTER });
+  // Tant que le GPS n'a pas répondu, on ne fetch pas sur le fallback Paris :
+  // évite un premier appel "faux" suivi d'un second dès la vraie position.
+  const gpsCoordinates = source === 'gps' ? coordinates : null;
   const { items, loading, refreshing, refresh } = useNearbyParkings({
-    center: coordinates,
+    center: gpsCoordinates,
     query: debouncedQuery,
     radius: filters.radius,
     minSpots: filters.minSpots,

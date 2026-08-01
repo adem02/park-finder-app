@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {isCancel} from 'axios';
 
 import { parkingsApi } from '@/api/parkings.api';
 import type {
@@ -39,31 +40,45 @@ export function useNearbyParkings({
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [hasFetched, setHasFetched] = useState(false);
+  const controllerRef = useRef<AbortController | null>(null);
 
   const fetchAt = useCallback(
     async (
       origin: ParkingCoordinates,
       mode: 'initial' | 'refresh',
     ) => {
+      // Annule la requête précédente si elle est encore en vol
+      controllerRef.current?.abort();
+      const controller = new AbortController();
+      controllerRef.current = controller;
+
       if (mode === 'initial') setLoading(true);
       else setRefreshing(true);
       try {
-        const res = await parkingsApi.findNearby({
-          latitude: origin.latitude,
-          longitude: origin.longitude,
-          radius,
-          minSpots: minSpots && minSpots > 0 ? minSpots : undefined,
-          availableOnly: availableOnly || undefined,
-          verifiedOnly: verifiedOnly || undefined,
-          sort,
-        });
+        const res = await parkingsApi.findNearby(
+          {
+            latitude: origin.latitude,
+            longitude: origin.longitude,
+            radius,
+            minSpots: minSpots && minSpots > 0 ? minSpots : undefined,
+            availableOnly: availableOnly || undefined,
+            verifiedOnly: verifiedOnly || undefined,
+            sort,
+          },
+          { signal: controller.signal },
+        );
+        if (controller.signal.aborted) return;
         setParkings(res.parkings);
       } catch (e) {
+        if (isCancel(e) || controller.signal.aborted) return;
         if (__DEV__) console.warn('[use-nearby-parkings] fetch failed', e);
       } finally {
-        setLoading(false);
-        setRefreshing(false);
-        setHasFetched(true);
+        if (controllerRef.current === controller) {
+          controllerRef.current = null;
+          setLoading(false);
+          setRefreshing(false);
+          setHasFetched(true);
+        }
       }
     },
     [radius, minSpots, availableOnly, verifiedOnly, sort],
@@ -82,6 +97,14 @@ export function useNearbyParkings({
     verifiedOnly,
     sort,
   ]);
+
+  // Cleanup à l'unmount pour annuler toute requête en vol
+  useEffect(() => {
+    return () => {
+      controllerRef.current?.abort();
+      controllerRef.current = null;
+    };
+  }, []);
 
   const refresh = useCallback(async () => {
     if (center) await fetchAt(center, 'refresh');

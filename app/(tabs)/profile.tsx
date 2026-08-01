@@ -10,11 +10,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BadgesSection } from '@/components/profile/badges-section';
-import { LeaderboardPreview } from '@/components/profile/leaderboard-preview';
 import { ProfileHero } from '@/components/profile/profile-hero';
 import { ProfileStatsGrid } from '@/components/profile/profile-stats-grid';
 import { ProfileTopBar } from '@/components/profile/profile-top-bar';
-import { RankingCard } from '@/components/profile/ranking-card';
 import { RecentContributionsSection } from '@/components/profile/recent-contributions-section';
 import { Colors } from '@/constants/Colors';
 import { useAuthStore } from '@/store/auth.store';
@@ -24,7 +22,7 @@ import { profileStyles as s } from './profile.styles';
 
 export default function ProfileScreen() {
   const authUser = useAuthStore((st) => st.user);
-  const { data, leaderboard, loading, error, fetch } = useProfileStore();
+  const { data, loading, error, fetch } = useProfileStore();
 
   useEffect(() => {
     void fetch();
@@ -75,17 +73,6 @@ export default function ProfileScreen() {
               points={data.stats.points}
               reportsCount={data.stats.reportsCount}
               votesCount={data.stats.votesCount}
-            />
-
-            <RankingCard
-              rank={data.rank?.rank ?? 0}
-              percentileLabel={data.rank?.percentile}
-              progressPct={data.stats.progressToNextLevel / 100}
-            />
-
-            <LeaderboardPreview
-              leaderboard={leaderboard}
-              currentUserId={data.user.id}
             />
 
             <BadgesSection badges={data.badges} />

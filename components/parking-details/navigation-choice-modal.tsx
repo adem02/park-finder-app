@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useEffect, useState } from 'react';
 import { Linking, Modal, Pressable, StyleSheet, Text } from 'react-native';
 
 import { Colors } from '@/constants/Colors';
+import { NAV_APPS, type NavApp } from '@/constants/Navigation';
 import { Radius, Spacing } from '@/constants/Spacing';
 import { Typography } from '@/constants/Typography';
 
@@ -20,25 +22,35 @@ export function NavigationChoiceModal({
   label,
   onClose,
 }: NavigationChoiceModalProps) {
-  const openGoogleMaps = async () => {
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}&travelmode=driving`;
-    onClose();
-    await Linking.openURL(url);
-  };
+  const [availableApps, setAvailableApps] = useState<NavApp[]>([]);
 
-  const openWaze = async () => {
-    const appUrl = `waze://?ll=${latitude},${longitude}&navigate=yes`;
-    const webUrl = `https://waze.com/ul?ll=${latitude},${longitude}&navigate=yes`;
-    onClose();
-    const canOpen = await Linking.canOpenURL(appUrl).catch(() => false);
-    await Linking.openURL(canOpen ? appUrl : webUrl);
-  };
+  useEffect(() => {
+    if (!visible) return;
 
-  const openSystemMaps = async () => {
-    const encoded = encodeURIComponent(label);
-    const url = `geo:${latitude},${longitude}?q=${latitude},${longitude}(${encoded})`;
+    let cancelled = false;
+
+    (async () => {
+      const checks = await Promise.all(
+        NAV_APPS.map(async (app) => {
+          if (app.scheme === null) return app;
+          const canOpen = await Linking.canOpenURL(app.scheme).catch(() => false);
+          return canOpen ? app : null;
+        }),
+      );
+
+      if (cancelled) return;
+      setAvailableApps(checks.filter((a): a is NavApp => a !== null));
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [visible]);
+
+  const openApp = async (app: NavApp) => {
+    const url = app.buildUrl(latitude, longitude, label);
     onClose();
-    await Linking.openURL(url);
+    await Linking.openURL(url).catch(() => undefined);
   };
 
   return (
@@ -52,35 +64,21 @@ export function NavigationChoiceModal({
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
           <Text style={styles.title}>Y aller avec</Text>
 
-          <Pressable style={styles.option} onPress={() => void openGoogleMaps()}>
-            <Ionicons name="map" size={22} color={Colors.primary} />
-            <Text style={styles.optionLabel}>Google Maps</Text>
-            <Ionicons
-              name="chevron-forward"
-              size={18}
-              color={Colors.textSecondary}
-            />
-          </Pressable>
-
-          <Pressable style={styles.option} onPress={() => void openWaze()}>
-            <Ionicons name="navigate" size={22} color="#33CCFF" />
-            <Text style={styles.optionLabel}>Waze</Text>
-            <Ionicons
-              name="chevron-forward"
-              size={18}
-              color={Colors.textSecondary}
-            />
-          </Pressable>
-
-          <Pressable style={styles.option} onPress={() => void openSystemMaps()}>
-            <Ionicons name="phone-portrait" size={22} color={Colors.textPrimary} />
-            <Text style={styles.optionLabel}>Application par défaut</Text>
-            <Ionicons
-              name="chevron-forward"
-              size={18}
-              color={Colors.textSecondary}
-            />
-          </Pressable>
+          {availableApps.map((app) => (
+            <Pressable
+              key={app.key}
+              style={styles.option}
+              onPress={() => void openApp(app)}
+            >
+              <Ionicons name={app.icon} size={22} color={app.color} />
+              <Text style={styles.optionLabel}>{app.label}</Text>
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={Colors.textSecondary}
+              />
+            </Pressable>
+          ))}
 
           <Pressable style={styles.cancel} onPress={onClose}>
             <Text style={styles.cancelLabel}>Annuler</Text>

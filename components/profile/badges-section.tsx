@@ -9,6 +9,18 @@ interface BadgesSectionProps {
   badges: ProfileBadge[];
 }
 
+// Icône + couleur par nom de badge (fallback tant que l'API ne renvoie pas
+// systématiquement une iconUrl, et pour les badges à venir non mappés ici).
+const BADGE_ICONS: Record<
+  string,
+  { icon: keyof typeof Ionicons.glyphMap; color: string }
+> = {
+  Explorer: { icon: 'compass-outline', color: Colors.primary },
+  Precise: { icon: 'checkmark-done-outline', color: Colors.success },
+};
+const DEFAULT_BADGE_ICON: { icon: keyof typeof Ionicons.glyphMap; color: string } =
+  { icon: 'medal', color: Colors.warning };
+
 export function BadgesSection({ badges }: BadgesSectionProps) {
   return (
     <View style={styles.section}>
@@ -31,24 +43,33 @@ export function BadgesSection({ badges }: BadgesSectionProps) {
         </View>
       ) : (
         <View style={styles.grid}>
-          {badges.map((b) => (
-            <View key={b.id} style={styles.badge}>
-              {b.iconUrl ? (
-                <Image source={{ uri: b.iconUrl }} style={styles.icon} />
-              ) : (
-                <View style={[styles.icon, styles.iconFallback]}>
-                  <Ionicons
-                    name="medal"
-                    size={28}
-                    color={Colors.warning}
-                  />
-                </View>
-              )}
-              <Text style={styles.name} numberOfLines={2}>
-                {b.name}
-              </Text>
-            </View>
-          ))}
+          {badges.map((b) => {
+            const fallbackIcon = BADGE_ICONS[b.name] ?? DEFAULT_BADGE_ICON;
+            return (
+              <View key={b.id} style={styles.badge}>
+                {b.iconUrl ? (
+                  <Image source={{ uri: b.iconUrl }} style={styles.icon} />
+                ) : (
+                  <View
+                    style={[
+                      styles.icon,
+                      styles.iconFallback,
+                      { backgroundColor: `${fallbackIcon.color}20` },
+                    ]}
+                  >
+                    <Ionicons
+                      name={fallbackIcon.icon}
+                      size={28}
+                      color={fallbackIcon.color}
+                    />
+                  </View>
+                )}
+                <Text style={styles.name} numberOfLines={2}>
+                  {b.name}
+                </Text>
+              </View>
+            );
+          })}
         </View>
       )}
 

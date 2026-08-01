@@ -1,15 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Alert,
-  Platform,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Linking, Platform, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { type Region } from 'react-native-maps';
 
+import { LocationPermissionBanner } from '@/components/map/location-permission-banner';
 import { MapFabs } from '@/components/map/map-fabs';
 import { MapMarker } from '@/components/map/map-marker';
 import { MapTopBar } from '@/components/map/map-top-bar';
@@ -30,7 +26,7 @@ const FALLBACK_REGION: Region = {
 
 const ZOOMED_DELTA = { latitudeDelta: 0.02, longitudeDelta: 0.02 };
 
-const MAP_RADIUS: ParkingRadius = 1000;
+const MAP_RADIUS: ParkingRadius = 5000;
 
 export default function MapScreen() {
   const mapRef = useRef<MapView | null>(null);
@@ -46,16 +42,34 @@ export default function MapScreen() {
     source,
     denied,
     refresh: refreshLocation,
-  } = useCurrentLocation({ fallback: FALLBACK_CENTER });
+  } = useCurrentLocation({ fallback: FALLBACK_CENTER, watch: true });
+
+  // Tant que le GPS n'a pas répondu, on ne transmet aucune position au hook
+  // de refetch : ça empêche tout fetch (et donc tout marker) sur le fallback.
+  const gpsCoordinates = source === 'gps' ? coordinates : null;
 
   const { effectiveCenter, setCenter, onRegionChangeComplete } =
-    useMapAutoRefetch({ initialCenter: coordinates, radius: MAP_RADIUS });
+    useMapAutoRefetch({ userLocation: gpsCoordinates, radius: MAP_RADIUS });
 
-  const { items, refreshing } = useNearbyParkings({
+  const { items, refreshing, refresh } = useNearbyParkings({
     center: effectiveCenter,
     radius: MAP_RADIUS,
   });
   const parkings = items.map((it) => it.parking);
+
+  // Skip le tout premier focus (données déjà fetchées au mount). Ensuite,
+  // chaque retour sur cet onglet (ex: après ajout d'un parking, ou vote/
+  // signalement sur l'écran détails) relance un refresh silencieux.
+  const hasFocusedOnceRef = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (!hasFocusedOnceRef.current) {
+        hasFocusedOnceRef.current = true;
+        return;
+      }
+      void refresh();
+    }, [refresh]),
+  );
 
   useEffect(() => {
     if (source === 'gps' && coordinates && !hasCenteredRef.current) {
@@ -71,13 +85,11 @@ export default function MapScreen() {
       return;
     }
     await refreshLocation();
-    if (denied) {
-      Alert.alert(
-        'Localisation désactivée',
-        'Activez la localisation pour centrer la carte sur votre position.',
-      );
-    }
-  }, [coordinates, denied, refreshLocation, setCenter, source]);
+  }, [coordinates, refreshLocation, setCenter, source]);
+
+  const handleOpenSettings = useCallback(() => {
+    void Linking.openSettings();
+  }, []);
 
   const selected = parkings.find((p) => p.id === selectedId) ?? null;
 
@@ -103,7 +115,9 @@ export default function MapScreen() {
         showsCompass={false}
         toolbarEnabled={false}
         onPress={() => setSelectedId(null)}
-        onRegionChangeComplete={onRegionChangeComplete}
+        onRegionChangeComplete={
+          source === 'gps' ? onRegionChangeComplete : undefined
+        }
       >
         {parkings.map((p) => (
           <MapMarker
@@ -125,6 +139,13 @@ export default function MapScreen() {
         onRecenter={handleRecenter}
         onAdd={() => router.push('/parking/add')}
       />
+
+      {denied ? (
+        <LocationPermissionBanner
+          onRetry={() => void refreshLocation()}
+          onOpenSettings={handleOpenSettings}
+        />
+      ) : null}
 
       {selected ? (
         <View pointerEvents="box-none" style={styles.bottomLayer}>

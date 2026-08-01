@@ -1,10 +1,10 @@
 import { useRouter } from 'expo-router';
+import { useCallback } from 'react';
 import { StyleSheet, View } from 'react-native';
-import MapView, { Marker, type Region } from 'react-native-maps';
+import MapView, { type Region } from 'react-native-maps';
 
-import { ParkingPin } from '@/components/map/parking-pin';
+import { MapMarker } from '@/components/map/map-marker';
 import { ParkingPreviewCard } from '@/components/map/parking-preview-card';
-import { Colors, PinColors } from '@/constants/Colors';
 import { Spacing } from '@/constants/Spacing';
 import type { NearbyParkingItem } from '@/types/parking.types';
 
@@ -25,6 +25,11 @@ export function SearchMapView({
   const selected =
     items.find((it) => it.parking.id === selectedId)?.parking ?? null;
 
+  const handleMarkerPress = useCallback(
+    (id: string) => onSelect(id),
+    [onSelect],
+  );
+
   return (
     <View style={styles.mapWrap}>
       <MapView
@@ -36,26 +41,15 @@ export function SearchMapView({
         toolbarEnabled={false}
         onPress={() => onSelect(null)}
       >
-        {items.map((it) => {
-          const isSelected = selectedId === it.parking.id;
-          return (
-            <Marker
-              key={it.parking.id}
-              coordinate={it.parking.coordinates}
-              anchor={{ x: 0.5, y: 1 }}
-              tracksViewChanges={false}
-              onPress={(e) => {
-                e.stopPropagation?.();
-                onSelect(it.parking.id);
-              }}
-            >
-              <ParkingPin
-                selected={isSelected}
-                color={isSelected ? Colors.primary : PinColors.available}
-              />
-            </Marker>
-          );
-        })}
+        {items.map((it) => (
+          <MapMarker
+            key={it.parking.id}
+            id={it.parking.id}
+            coordinate={it.parking.coordinates}
+            selected={selectedId === it.parking.id}
+            onPress={handleMarkerPress}
+          />
+        ))}
       </MapView>
 
       {selected && (

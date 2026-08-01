@@ -25,7 +25,6 @@ export function MapTopBar({ refreshing, onSearchPress }: MapTopBarProps) {
         <Text style={styles.searchPlaceholder} numberOfLines={1}>
           Rechercher un parking…
         </Text>
-        <Ionicons name="options" size={20} color={Colors.primary} />
       </Pressable>
       {refreshing ? (
         <View style={styles.refreshPill}>
