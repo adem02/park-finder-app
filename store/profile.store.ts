@@ -1,11 +1,10 @@
 import { create } from 'zustand';
 import { UsersApi } from '@/api/users.api';
-import type { Leaderboard, UserProfile } from '@/types/profile.types';
+import type { UserProfile } from '@/types/profile.types';
 import { extractErrorMessage } from '@/lib/extract-error-message';
 
 interface ProfileState {
   data: UserProfile | null;
-  leaderboard: Leaderboard | null;
   loading: boolean;
   error: string | null;
   fetch: (opts?: { force?: boolean }) => Promise<void>;
@@ -14,7 +13,6 @@ interface ProfileState {
 
 export const useProfileStore = create<ProfileState>((set, get) => ({
   data: null,
-  leaderboard: null,
   loading: false,
   error: null,
 
@@ -25,11 +23,8 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
 
     set({ loading: true, error: null });
     try {
-      const [profile, leaderboard] = await Promise.all([
-        UsersApi.getMe(),
-        UsersApi.getLeaderboard().catch(() => null),
-      ]);
-      set({ data: profile, leaderboard, loading: false });
+      const profile = await UsersApi.getMe();
+      set({ data: profile, loading: false });
     } catch (e) {
       set({
         loading: false,
@@ -39,6 +34,6 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
   },
 
   reset() {
-    set({ data: null, leaderboard: null, loading: false, error: null });
+    set({ data: null, loading: false, error: null });
   },
 }));

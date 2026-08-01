@@ -11,15 +11,18 @@ import type {
 } from '../types/parking.types';
 
 export const parkingsApi = {
-  findNearby: async ({
-    latitude,
-    longitude,
-    radius,
-    minSpots,
-    availableOnly,
-    verifiedOnly,
-    sort,
-  }: FindNearbyParams): Promise<FindNearbyParkingsResponse> => {
+  findNearby: async (
+    {
+      latitude,
+      longitude,
+      radius,
+      minSpots,
+      availableOnly,
+      verifiedOnly,
+      sort,
+    }: FindNearbyParams,
+    options?: { signal?: AbortSignal },
+  ): Promise<FindNearbyParkingsResponse> => {
     const { data } = await apiClient.get<FindNearbyParkingsResponse>(
       Endpoints.parkings.nearby,
       {
@@ -32,6 +35,7 @@ export const parkingsApi = {
           ...(verifiedOnly ? { verifiedOnly: true } : {}),
           ...(sort ? { sort } : {}),
         },
+        signal: options?.signal,
       },
     );
     return data;

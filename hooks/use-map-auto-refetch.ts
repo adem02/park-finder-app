@@ -8,22 +8,40 @@ import type {
 } from '@/types/parking.types';
 
 interface UseMapAutoRefetchOptions {
-  initialCenter: ParkingCoordinates | null;
+  /** Position GPS de l'utilisateur (mise à jour continue si watch actif). */
+  userLocation: ParkingCoordinates | null;
+  /** Rayon de fetch en mètres. */
   radius: ParkingRadius;
+  /**
+   * Ratio de distance parcourue (par rapport au rayon) au-delà duquel on
+   * refetch. Par défaut 0.8 → refetch uniquement quand l'user sort quasi
+   * intégralement de la zone déjà chargée.
+   */
   thresholdRatio?: number;
+  /** Debounce des `onRegionChangeComplete` (pan/zoom) en ms. */
   debounceMs?: number;
 }
 
 interface UseMapAutoRefetchReturn {
+  /** Centre autour duquel `useNearbyParkings` doit fetcher. */
   effectiveCenter: ParkingCoordinates | null;
+  /** Force un centre (ex: bouton recentrer). */
   setCenter: (center: ParkingCoordinates) => void;
+  /** À passer à `<MapView onRegionChangeComplete={...} />`. */
   onRegionChangeComplete: (region: Region) => void;
 }
 
+/**
+ * Décide quand refetch les parkings :
+ * - au pan/zoom : si le centre visible s'éloigne de plus de `thresholdRatio`
+ *   du dernier centre fetché → refetch (debouncé)
+ * - au déplacement physique de l'user (GPS watch) : idem si l'user sort de
+ *   plus de `thresholdRatio` du dernier centre fetché → refetch silencieux
+ */
 export function useMapAutoRefetch({
-  initialCenter,
+  userLocation,
   radius,
-  thresholdRatio = 0.3,
+  thresholdRatio = 0.8,
   debounceMs = 400,
 }: UseMapAutoRefetchOptions): UseMapAutoRefetchReturn {
   const [effectiveCenter, setEffectiveCenter] =
@@ -31,17 +49,36 @@ export function useMapAutoRefetch({
   const lastFetchedCenterRef = useRef<ParkingCoordinates | null>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Initialise le centre effectif à la première position GPS connue
   useEffect(() => {
-    if (!initialCenter || effectiveCenter) return;
-    setEffectiveCenter(initialCenter);
-    lastFetchedCenterRef.current = initialCenter;
-  }, [initialCenter, effectiveCenter]);
+    if (!userLocation || effectiveCenter) return;
+    setEffectiveCenter(userLocation);
+    lastFetchedCenterRef.current = userLocation;
+  }, [userLocation, effectiveCenter]);
 
+  // Cleanup du timer debounce
   useEffect(() => {
     return () => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     };
   }, []);
+
+  // Refetch silencieux si l'user a physiquement bougé au-delà du seuil
+  useEffect(() => {
+    if (!userLocation) return;
+    const ref = lastFetchedCenterRef.current;
+    if (!ref) return;
+    const moved = distanceMeters(ref, userLocation);
+    if (moved > radius * thresholdRatio) {
+      lastFetchedCenterRef.current = userLocation;
+      setEffectiveCenter(userLocation);
+      if (__DEV__)
+        console.log(
+          `[map] user moved ${Math.round(moved)}m → silent refetch`,
+        );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userLocation?.latitude, userLocation?.longitude, radius, thresholdRatio]);
 
   const setCenter = useCallback((center: ParkingCoordinates) => {
     lastFetchedCenterRef.current = center;
@@ -68,9 +105,9 @@ export function useMapAutoRefetch({
           lastFetchedCenterRef.current = newCenter;
           setEffectiveCenter(newCenter);
           if (__DEV__)
-            console.log(`[map] refetch (moved ${Math.round(moved)}m)`);
+            console.log(`[map] refetch pan (moved ${Math.round(moved)}m)`);
         } else if (__DEV__) {
-          console.log(`[map] skip (moved ${Math.round(moved)}m)`);
+          console.log(`[map] skip pan (moved ${Math.round(moved)}m)`);
         }
       }, debounceMs);
     },
